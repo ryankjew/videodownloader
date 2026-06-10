@@ -333,7 +333,7 @@ function fmtB(b){
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 document.getElementById('url-input').addEventListener('keydown',e=>{if(e.key==='Enter')addUrl();});
-document.getElementById('url-input').addEventListener('paste',e=>{
+document.getElementById('url-input').addEventListener('paste',e=>{return;
   setTimeout(()=>{const v=document.getElementById('url-input').value;if(v.includes('\n')||v.split(' ').length>1)addUrl();},50);
 });
 </script>
