@@ -282,12 +282,19 @@ async function pollSession(){
     const res=await fetch('/api/session/'+S.sessionId);
     if(res.status===404){clearInterval(S.pollTimer);return;}
     const data=await res.json();
-    data.items.forEach(srv=>{
-      const local=S.urls.find(u=>u.jobId===srv.job_id);
+    data.items.forEach((srv,i)=>{
+      // Match by jobId first, then by index as fallback
+      let local=S.urls.find(u=>u.jobId===srv.job_id);
+      if(!local) local=S.urls.filter(u=>u.status!=='queued')[i];
+      if(!local) local=S.urls[i];
       if(!local)return;
-      local.status=srv.status;local.progress=srv.progress;
+      if(srv.job_id) local.jobId=srv.job_id;
+      local.status=srv.status;
+      local.progress=srv.progress;
       local.title=srv.title||local.title;
-      local.filename=srv.filename;local.filesize=srv.filesize;local.error=srv.error;
+      local.filename=srv.filename;
+      local.filesize=srv.filesize;
+      local.error=srv.error;
     });
     renderList();renderStats();updateButtons();
     if(data.status==='done'){
