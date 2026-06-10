@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VideoDown — Baixe vídeos em massa</title>
+<style>
+:root{
+  --bg:#0f0f11;--surface:#1a1a1f;--surface2:#222228;--border:#2e2e38;--border2:#3a3a48;
+  --text:#e8e8f0;--text2:#9090a8;--text3:#5a5a72;
+  --accent:#6c63ff;--accent-dim:#6c63ff22;
+  --green:#22c97a;--green-dim:#22c97a15;
+  --red:#ff5c5c;--red-dim:#ff5c5c15;
+  --amber:#ffb84d;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,'Segoe UI',system-ui,sans-serif;font-size:14px;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px;}
+
+.wrap{width:100%;max-width:680px;}
+
+.hero{text-align:center;margin-bottom:28px;}
+.hero-icon{font-size:42px;margin-bottom:10px;}
+.hero h1{font-size:24px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;}
+.hero p{font-size:13px;color:var(--text2);}
+.sites{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:12px;}
+.site-chip{font-size:11px;padding:3px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;color:var(--text3);}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:14px;}
+
+/* URL input area */
+.url-add-row{display:flex;gap:8px;margin-bottom:12px;}
+.url-input{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;font-size:14px;color:var(--text);outline:none;transition:border-color .15s;}
+.url-input:focus{border-color:var(--accent);}
+.url-input::placeholder{color:var(--text3);}
+.btn-add{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s;}
+.btn-add:hover{background:#7c73ff;}
+
+/* URL list */
+.url-list{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;max-height:280px;overflow-y:auto;}
+.url-list::-webkit-scrollbar{width:3px;}
+.url-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+.url-item{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;}
+.url-item .ui-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0;}
+.url-item .ui-dot.queued{background:var(--text3);}
+.url-item .ui-dot.downloading,.url-item .ui-dot.processing{background:var(--accent);animation:pulse 1s infinite;}
+.url-item .ui-dot.done{background:var(--green);}
+.url-item .ui-dot.error{background:var(--red);}
+.url-item .ui-text{flex:1;min-width:0;}
+.url-item .ui-title{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.url-item .ui-sub{font-size:11px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.url-item .ui-pct{font-size:11px;color:var(--text3);flex-shrink:0;}
+.url-item .ui-bar{height:2px;background:var(--border);border-radius:1px;margin-top:5px;overflow:hidden;}
+.url-item .ui-fill{height:100%;background:var(--accent);border-radius:1px;transition:width .3s;}
+.url-item .ui-dl{background:var(--green);color:#071a0e;border:none;padding:4px 10px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap;}
+.url-item .ui-dl:hover{background:#2ee88a;}
+.url-item .ui-err{font-size:11px;color:var(--red);flex-shrink:0;}
+.url-item .ui-rm{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;flex-shrink:0;padding:0 2px;}
+.url-item .ui-rm:hover{color:var(--red);}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.empty-urls{font-size:13px;color:var(--text3);text-align:center;padding:20px;border:1px dashed var(--border2);border-radius:8px;}
+
+/* Options row */
+.opts-row{display:flex;gap:10px;margin-bottom:16px;align-items:flex-end;}
+.opt-g{flex:1;}
+.opt-g label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);display:block;margin-bottom:5px;}
+select{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);outline:none;cursor:pointer;}
+select:focus{border-color:var(--accent);}
+
+.toggle-row{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;height:38px;}
+.toggle-row span{font-size:12px;color:var(--text2);flex:1;}
+.tog{width:32px;height:18px;background:var(--border2);border-radius:9px;position:relative;transition:background .2s;flex-shrink:0;}
+.tog.on{background:var(--accent);}
+.tog::after{content:'';position:absolute;width:12px;height:12px;background:#fff;border-radius:50%;top:3px;left:3px;transition:left .2s;}
+.tog.on::after{left:17px;}
+
+/* Action buttons */
+.action-row{display:flex;gap:8px;}
+.btn-start{flex:2;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:7px;}
+.btn-start:hover{background:#7c73ff;}
+.btn-start:disabled{opacity:.4;cursor:not-allowed;}
+.btn-clear-all{flex:1;background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;cursor:pointer;transition:background .15s;}
+.btn-clear-all:hover{background:var(--border);}
+.btn-clear-all:disabled{opacity:.4;cursor:not-allowed;}
+
+/* Stats bar */
+.stats-bar{display:flex;gap:16px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;font-size:13px;align-items:center;}
+.stats-bar .st{color:var(--text2);}
+.stats-bar .st strong{color:var(--text);}
+.stats-bar .spacer{flex:1;}
+.spinner{display:inline-block;width:12px;height:12px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:5px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Download all */
+.btn-dl-all{width:100%;background:var(--green);color:#071a0e;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:background .15s;margin-bottom:8px;}
+.btn-dl-all:hover{background:#2ee88a;}
+.btn-dl-all:disabled{opacity:.4;cursor:not-allowed;}
+.warn{font-size:11px;color:var(--amber);text-align:center;}
+
+.footer{text-align:center;font-size:11px;color:var(--text3);margin-top:20px;line-height:1.8;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="hero-icon">⬇️</div>
+    <h1>VideoDown</h1>
+    <p>Baixe vídeos em massa de qualquer site. Cole os links um a um ou vários de uma vez.</p>
+    <div class="sites">
+      {% for site in sites %}<span class="site-chip">{{ site }}</span>{% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="url-add-row">
+      <input type="text" class="url-input" id="url-input"
+             placeholder="Cole o link do vídeo (Enter para adicionar)...">
+      <button class="btn-add" onclick="addUrl()">+ Adicionar</button>
+    </div>
+
+    <div class="url-list" id="url-list">
+      <div class="empty-urls" id="empty-msg">Adicione links acima para começar</div>
+    </div>
+
+    <div class="opts-row">
+      <div class="opt-g">
+        <label>Qualidade</label>
+        <select id="quality">
+          <option value="best">Melhor qualidade</option>
+          <option value="720">720p</option>
+          <option value="480">480p</option>
+          <option value="360">360p</option>
+        </select>
+      </div>
+      <div class="opt-g">
+        <label>Formato</label>
+        <div class="toggle-row" onclick="toggleAudio()">
+          <span>Só áudio (MP3)</span>
+          <div class="tog" id="tog-el"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-row">
+      <button class="btn-start" id="btn-start" disabled onclick="startAll()">
+        ⬇ Baixar todos
+      </button>
+      <button class="btn-clear-all" id="btn-clear" onclick="clearAll()">
+        🗑 Limpar lista
+      </button>
+    </div>
+  </div>
+
+  <div id="stats-bar" class="stats-bar" style="display:none;">
+    <div class="st">Total: <strong id="st-total">0</strong></div>
+    <div class="st">Concluídos: <strong id="st-done">0</strong></div>
+    <div class="st">Erros: <strong id="st-err" style="color:var(--red);">0</strong></div>
+    <div class="spacer"></div>
+    <div id="st-spin" style="display:none;font-size:12px;color:var(--text3);"><span class="spinner"></span>Baixando...</div>
+  </div>
+
+  <div id="dl-all-wrap" style="display:none;">
+    <button class="btn-dl-all" id="btn-dl-all" onclick="downloadAll()">
+      ⬇ Baixar tudo como ZIP
+    </button>
+    <div class="warn">⚠ Arquivos deletados do servidor após 10 minutos</div>
+  </div>
+
+  <div class="footer">
+    Use apenas para conteúdo com permissão do criador ou de sua autoria.<br>
+    Máximo 20 vídeos por sessão. Arquivos deletados automaticamente.
+  </div>
+</div>
+
+<script>
+const S = {
+  urls: [],       // {id, url, status, progress, title, filename, filesize, error}
+  sessionId: null,
+  pollTimer: null,
+  audioOnly: false,
+  running: false,
+};
+
+let urlCounter = 0;
+
+function toggleAudio() {
+  S.audioOnly = !S.audioOnly;
+  document.getElementById('tog-el').classList.toggle('on', S.audioOnly);
+  const q = document.getElementById('quality');
+  q.disabled = S.audioOnly;
+  q.style.opacity = S.audioOnly ? '0.4' : '1';
+}
+
+function addUrl() {
+  if (S.running) return;
+  const input = document.getElementById('url-input');
+  const raw = input.value.trim();
+  if (!raw) return;
+
+  // Support pasting multiple URLs separated by newlines or spaces
+  const lines = raw.split(/[\n\r\s]+/).filter(u => u.startsWith('http'));
+  if (!lines.length) { alert('Link inválido — deve começar com http'); return; }
+
+  lines.forEach(url => {
+    if (S.urls.find(u => u.url === url)) return;
+    if (S.urls.length >= 20) { alert('Máximo 20 vídeos por sessão'); return; }
+    S.urls.push({ id: ++urlCounter, url, status: 'queued', progress: 0, title: url.slice(0, 60), filename: null, filesize: null, error: null, jobId: null });
+  });
+
+  input.value = '';
+  renderList();
+  updateButtons();
+}
+
+function removeUrl(id) {
+  if (S.running) return;
+  S.urls = S.urls.filter(u => u.id !== id);
+  renderList();
+  updateButtons();
+}
+
+function clearAll() {
+  if (S.running) return;
+  S.urls = [];
+  S.sessionId = null;
+  if (S.pollTimer) clearInterval(S.pollTimer);
+  renderList();
+  updateButtons();
+  document.getElementById('stats-bar').style.display = 'none';
+  document.getElementById('dl-all-wrap').style.display = 'none';
+}
+
+function renderList() {
+  const list = document.getElementById('url-list');
+  const empty = document.getElementById('empty-msg');
+  if (!S.urls.length) {
+    list.innerHTML = '';
+    list.appendChild(empty);
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+  list.innerHTML = S.urls.map(u => {
+    const showBar = u.status === 'downloading' || u.status === 'processing';
+    const showDl = u.status === 'done' && u.jobId;
+    const showErr = u.status === 'error';
+    const showRm = !S.running || (u.status !== 'downloading' && u.status !== 'processing');
+
+    let subText = u.status === 'queued' ? 'Na fila'
+      : u.status === 'downloading' ? 'Baixando...'
+      : u.status === 'processing' ? 'Processando...'
+      : u.status === 'done' ? (u.filename || 'Concluído') + (u.filesize ? ' · ' + fmtB(u.filesize) : '')
+      : u.status === 'error' ? '' : '';
+
+    return `<div class="url-item">
+      <div class="ui-dot ${u.status}"></div>
+      <div class="ui-text">
+        <div class="ui-title" title="${esc(u.url)}">${esc(u.title || u.url)}</div>
+        <div class="ui-sub">${esc(subText)}</div>
+        ${showBar ? `<div class="ui-bar"><div class="ui-fill" style="width:${u.progress}%"></div></div>` : ''}
+      </div>
+      ${showDl ? `<button class="ui-dl" onclick="dlOne('${u.jobId}')">⬇ Baixar</button>` : ''}
+      ${showErr ? `<span class="ui-err" title="${esc(u.error || '')}">✗ erro</span>` : ''}
+      <span class="ui-pct">${showBar ? u.progress + '%' : ''}</span>
+      ${showRm ? `<button class="ui-rm" onclick="removeUrl(${u.id})" title="Remover">×</button>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function updateButtons() {
+  const hasQueued = S.urls.some(u => u.status === 'queued');
+  const hasDone = S.urls.some(u => u.status === 'done');
+  document.getElementById('btn-start').disabled = !S.urls.length || S.running || !hasQueued;
+  document.getElementById('btn-clear').disabled = S.running;
+  document.getElementById('dl-all-wrap').style.display = hasDone ? '' : 'none';
+}
+
+async function startAll() {
+  const queued = S.urls.filter(u => u.status === 'queued');
+  if (!queued.length) return;
+  S.running = true;
+  updateButtons();
+
+  const urls = queued.map(u => u.url);
+  const quality = document.getElementById('quality').value;
+
+  try {
+    const res = await fetch('/api/start', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({urls, quality, audio_only: S.audioOnly})
+    });
+    const data = await res.json();
+    if (data.error) { alert('Erro: ' + data.error); S.running = false; updateButtons(); return; }
+
+    S.sessionId = data.session_id;
+
+    // Map job_ids back to urls
+    data.job_ids.forEach((jobId, i) => {
+      const urlObj = S.urls.find(u => u.url === queued[i].url);
+      if (urlObj) { urlObj.jobId = jobId; urlObj.status = 'downloading'; }
+    });
+
+    document.getElementById('stats-bar').style.display = '';
+    if (S.pollTimer) clearInterval(S.pollTimer);
+    S.pollTimer = setInterval(pollSession, 800);
+  } catch(e) {
+    alert('Erro: ' + e.message);
+    S.running = false;
+    updateButtons();
+  }
+}
+
+async function pollSession() {
+  if (!S.sessionId) return;
+  try {
+    const res = await fetch('/api/session/' + S.sessionId);
+    if (res.status === 404) { clearInterval(S.pollTimer); return; }
+    const data = await res.json();
+
+    data.items.forEach(srv => {
+      const local = S.urls.find(u => u.jobId === srv.job_id);
+      if (!local) return;
+      local.status = srv.status;
+      local.progress = srv.progress;
+      local.title = srv.title || local.title;
+      local.filename = srv.filename;
+      local.filesize = srv.filesize;
+      local.error = srv.error;
+    });
+
+    renderList();
+    renderStats();
+    updateButtons();
+
+    if (data.status === 'done') {
+      clearInterval(S.pollTimer);
+      S.running = false;
+      updateButtons();
+      document.getElementById('st-spin').style.display = 'none';
+    }
+  } catch(e) { console.error(e); }
+}
+
+function renderStats() {
+  const total = S.urls.length;
+  const done = S.urls.filter(u => u.status === 'done').length;
+  const errs = S.urls.filter(u => u.status === 'error').length;
+  const running = S.urls.some(u => u.status === 'downloading' || u.status === 'processing');
+  document.getElementById('st-total').textContent = total;
+  document.getElementById('st-done').textContent = done;
+  document.getElementById('st-err').textContent = errs;
+  document.getElementById('st-spin').style.display = running ? '' : 'none';
+}
+
+function dlOne(jobId) {
+  const a = document.createElement('a');
+  a.href = '/api/get/' + jobId;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+function downloadAll() {
+  if (!S.sessionId) return;
+  window.location.href = '/api/download-all/' + S.sessionId;
+}
+
+function fmtB(b) {
+  if (!b) return '';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  if (b < 1073741824) return (b/1048576).toFixed(1) + ' MB';
+  return (b/1073741824).toFixed(2) + ' GB';
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.getElementById('url-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addUrl();
+});
+
+// Support pasting a block of links at once
+document.getElementById('url-input').addEventListener('paste', e => {
+  setTimeout(() => {
+    const val = document.getElementById('url-input').value;
+    if (val.includes('\n') || val.split(' ').length > 1) {
+      addUrl();
+    }
+  }, 50);
+});
+</script>
+</body>
+</html>
