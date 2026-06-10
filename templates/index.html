@@ -339,7 +339,7 @@ async function pollSession() {
       clearInterval(S.pollTimer);
       S.running = false;
       updateButtons();
-      document.getElementById('st-spin').style.display = 'none';
+      const sp = document.getElementById('st-spin'); if(sp) sp.style.display = 'none';
     }
   } catch(e) { console.error(e); }
 }
@@ -352,7 +352,7 @@ function renderStats() {
   document.getElementById('st-total').textContent = total;
   document.getElementById('st-done').textContent = done;
   document.getElementById('st-err').textContent = errs;
-  document.getElementById('st-spin').style.display = running ? '' : 'none';
+  const spin = document.getElementById('st-spin'); if(spin) spin.style.display = running ? 'flex' : 'none';
 }
 
 function dlOne(jobId) {
