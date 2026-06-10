@@ -30,7 +30,7 @@ def download_video(job_id, url, quality, audio_only):
         job["status"] = "downloading"
         job["progress"] = 5
 
-        out_template = str(job_dir / "%(title).80s.%(ext)s")
+        out_template = str(job_dir / "video.%(ext)s")
         cmd = ["yt-dlp", "--no-playlist", "--no-warnings", "--no-part"]
 
         if audio_only:
