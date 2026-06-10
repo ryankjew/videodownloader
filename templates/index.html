@@ -3,133 +3,91 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Clipador — Baixe vídeos em massa</title>
+<title>Clipador</title>
 <style>
 :root{
   --bg:#0a0a0d;--surface:#13131a;--surface2:#1c1c26;--border:#25253a;--border2:#32324a;
   --text:#eeeef5;--text2:#8888aa;--text3:#44445a;
-  --accent:#7c6dff;--accent2:#a599ff;--accent-dim:#7c6dff18;
-  --green:#1ed97a;--green-dim:#1ed97a12;
-  --red:#ff4f4f;--red-dim:#ff4f4f12;
-  --amber:#ffb020;
+  --accent:#7c6dff;--green:#1ed97a;--red:#ff4f4f;--amber:#ffb020;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:-apple-system,'Segoe UI',system-ui,sans-serif;font-size:14px;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:48px 16px 40px;}
-
 .wrap{width:100%;max-width:600px;}
-
-/* Header */
-.header{text-align:center;margin-bottom:36px;}
-.header h1{font-size:28px;font-weight:800;letter-spacing:-0.03em;background:linear-gradient(135deg,#fff 0%,var(--accent2) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px;}
+.header{text-align:center;margin-bottom:32px;}
+.header h1{font-size:28px;font-weight:800;letter-spacing:-0.03em;color:#fff;margin-bottom:6px;}
 .header p{font-size:13px;color:var(--text3);}
-.sites{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:14px;}
-.site-chip{font-size:11px;padding:3px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;color:var(--text3);}
-
-/* Main card */
+.sites{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:12px;}
+.chip{font-size:11px;padding:3px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;color:var(--text3);}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:12px;}
-
-/* URL input */
-.url-add-row{display:flex;gap:8px;margin-bottom:12px;}
-.url-input{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:11px 14px;font-size:14px;color:var(--text);outline:none;transition:border-color .15s;}
-.url-input:focus{border-color:var(--accent);}
-.url-input::placeholder{color:var(--text3);}
-.btn-add{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;}
-.btn-add:hover{background:var(--accent2);transform:translateY(-1px);}
-
-/* URL list */
+.row{display:flex;gap:8px;margin-bottom:12px;}
+input[type=text]{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:11px 14px;font-size:14px;color:var(--text);outline:none;}
+input[type=text]:focus{border-color:var(--accent);}
+input[type=text]::placeholder{color:var(--text3);}
+.btn-add{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:600;cursor:pointer;}
+.btn-add:hover{opacity:.85;}
 .url-list{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;max-height:260px;overflow-y:auto;}
-.url-list::-webkit-scrollbar{width:3px;}
-.url-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
-
-.empty-urls{font-size:12px;color:var(--text3);text-align:center;padding:18px;border:1px dashed var(--border);border-radius:10px;}
-
-.url-item{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;transition:border-color .15s;}
-.url-item.is-done{border-color:#1ed97a22;}
-.url-item.is-error{border-color:#ff4f4f22;}
-.ui-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-.ui-dot.queued{background:var(--text3);}
+.empty{font-size:12px;color:var(--text3);text-align:center;padding:18px;border:1px dashed var(--border);border-radius:10px;}
+.ui{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;}
+.ui-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:var(--text3);}
 .ui-dot.downloading,.ui-dot.processing{background:var(--accent);animation:pulse 1s infinite;}
 .ui-dot.done{background:var(--green);}
 .ui-dot.error{background:var(--red);}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.ui-text{flex:1;min-width:0;}
-.ui-title{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);}
+.ui-info{flex:1;min-width:0;}
+.ui-title{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ui-sub{font-size:11px;color:var(--text3);margin-top:2px;}
 .ui-bar{height:2px;background:var(--border);border-radius:1px;margin-top:5px;overflow:hidden;}
-.ui-fill{height:100%;background:var(--accent);border-radius:1px;transition:width .4s;}
-.ui-pct{font-size:11px;color:var(--text3);flex-shrink:0;min-width:28px;text-align:right;}
-.ui-dl{background:var(--green);color:#03150a;border:none;padding:5px 11px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;}
-.ui-dl:hover{background:#2bff8a;}
-.ui-err{font-size:11px;color:var(--red);flex-shrink:0;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.ui-rm{background:none;border:none;color:var(--text3);cursor:pointer;font-size:15px;flex-shrink:0;padding:0 2px;line-height:1;transition:color .15s;}
-.ui-rm:hover{color:var(--red);}
-
-/* Options */
-.opts-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
-.opt-g label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);display:block;margin-bottom:6px;}
-select{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--text);outline:none;cursor:pointer;transition:border-color .15s;}
-select:focus{border-color:var(--accent);}
-.toggle-row{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;cursor:pointer;transition:border-color .15s;}
-.toggle-row:hover{border-color:var(--accent);}
-.toggle-row span{font-size:12px;color:var(--text2);flex:1;}
+.ui-fill{height:100%;background:var(--accent);border-radius:1px;transition:width .3s;}
+.ui-pct{font-size:11px;color:var(--text3);flex-shrink:0;min-width:30px;text-align:right;}
+.btn-dl{background:var(--green);color:#03150a;border:none;padding:5px 11px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;}
+.btn-rm{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;flex-shrink:0;}
+.btn-rm:hover{color:var(--red);}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.opt label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);display:block;margin-bottom:6px;}
+select{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--text);outline:none;cursor:pointer;}
+.tog-row{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;cursor:pointer;}
+.tog-row span{font-size:12px;color:var(--text2);flex:1;}
 .tog{width:34px;height:19px;background:var(--border2);border-radius:10px;position:relative;transition:background .2s;flex-shrink:0;}
 .tog.on{background:var(--accent);}
-.tog::after{content:'';position:absolute;width:13px;height:13px;background:#fff;border-radius:50%;top:3px;left:3px;transition:left .2s;box-shadow:0 1px 3px #0004;}
+.tog::after{content:'';position:absolute;width:13px;height:13px;background:#fff;border-radius:50%;top:3px;left:3px;transition:left .2s;}
 .tog.on::after{left:18px;}
-
-/* Buttons */
-.action-row{display:flex;gap:8px;}
-.btn-start{flex:2;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:7px;letter-spacing:-0.01em;}
-.btn-start:hover{background:var(--accent2);transform:translateY(-1px);}
-.btn-start:disabled{opacity:.35;cursor:not-allowed;transform:none;}
-.btn-clear-all{flex:1;background:transparent;color:var(--text3);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:13px;cursor:pointer;transition:all .15s;}
-.btn-clear-all:hover{background:var(--surface2);color:var(--text2);}
-.btn-clear-all:disabled{opacity:.35;cursor:not-allowed;}
-
-/* Stats */
-.stats-bar{display:flex;gap:16px;padding:13px 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:12px;font-size:13px;align-items:center;}
+.actions{display:flex;gap:8px;}
+.btn-start{flex:2;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;}
+.btn-start:hover{opacity:.9;}
+.btn-start:disabled{opacity:.35;cursor:not-allowed;}
+.btn-ghost{flex:1;background:transparent;color:var(--text3);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:13px;cursor:pointer;}
+.btn-ghost:hover{background:var(--surface2);}
+.btn-ghost:disabled{opacity:.35;cursor:not-allowed;}
+.stats{display:flex;gap:16px;padding:13px 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:12px;font-size:13px;align-items:center;}
 .st{color:var(--text3);}
-.st strong{color:var(--text);font-variant-numeric:tabular-nums;}
-.spacer{flex:1;}
-.running-label{font-size:12px;color:var(--text3);display:flex;align-items:center;gap:6px;}
-.spinner{display:inline-block;width:11px;height:11px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+.st strong{color:var(--text);}
+.sp{flex:1;}
+.spin{display:inline-block;width:11px;height:11px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin-right:6px;}
 @keyframes spin{to{transform:rotate(360deg)}}
-
-/* Download all */
-.btn-dl-all{width:100%;background:var(--green);color:#03150a;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .15s;margin-bottom:6px;letter-spacing:-0.01em;}
-.btn-dl-all:hover{background:#2bff8a;transform:translateY(-1px);}
-.btn-dl-all:disabled{opacity:.35;cursor:not-allowed;transform:none;}
-.warn-txt{font-size:11px;color:var(--text3);text-align:center;}
-
+.btn-zip{width:100%;background:var(--green);color:#03150a;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:6px;}
+.btn-zip:hover{opacity:.9;}
+.hint{font-size:11px;color:var(--text3);text-align:center;}
 .footer{text-align:center;font-size:11px;color:var(--text3);margin-top:24px;}
-
-::-webkit-scrollbar{width:4px;}
-::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
 </style>
 </head>
 <body>
 <div class="wrap">
-
   <div class="header">
     <h1>Clipador</h1>
     <p>Baixe vídeos em massa de qualquer site</p>
     <div class="sites">
-      {% for site in sites %}<span class="site-chip">{{ site }}</span>{% endfor %}
+      {% for site in sites %}<span class="chip">{{ site }}</span>{% endfor %}
     </div>
   </div>
 
   <div class="card">
-    <div class="url-add-row">
-      <input type="text" class="url-input" id="url-input" placeholder="Cole o link do vídeo...">
-      <button class="btn-add" onclick="addUrl()">+ Adicionar</button>
+    <div class="row">
+      <input type="text" id="inp" placeholder="Cole o link do vídeo...">
+      <button class="btn-add" id="btn-add">+ Adicionar</button>
     </div>
-
-    <div class="url-list" id="url-list">
-      <div class="empty-urls" id="empty-msg">Adicione links acima para começar</div>
-    </div>
-
-    <div class="opts-row">
-      <div class="opt-g">
+    <div class="url-list" id="list"></div>
+    <div class="opts">
+      <div class="opt">
         <label>Qualidade</label>
         <select id="quality">
           <option value="best">Melhor qualidade</option>
@@ -138,204 +96,267 @@ select:focus{border-color:var(--accent);}
           <option value="360">360p</option>
         </select>
       </div>
-      <div class="opt-g">
+      <div class="opt">
         <label>Formato</label>
-        <div class="toggle-row" onclick="toggleAudio()">
+        <div class="tog-row" id="tog-row">
           <span>Só áudio (MP3)</span>
-          <div class="tog" id="tog-el"></div>
+          <div class="tog" id="tog"></div>
         </div>
       </div>
     </div>
-
-    <div class="action-row">
-      <button class="btn-start" id="btn-start" disabled onclick="startAll()">
-        ⬇ Baixar todos
-      </button>
-      <button class="btn-clear-all" id="btn-clear" onclick="clearAll()">
-        Limpar lista
-      </button>
+    <div class="actions">
+      <button class="btn-start" id="btn-start" disabled>⬇ Baixar todos</button>
+      <button class="btn-ghost" id="btn-clear" disabled>Limpar</button>
     </div>
   </div>
 
-  <div id="stats-bar" class="stats-bar" style="display:none;">
-    <div class="st">Total: <strong id="st-total">0</strong></div>
-    <div class="st">Prontos: <strong id="st-done">0</strong></div>
-    <div class="st">Erros: <strong id="st-err" style="color:var(--red);">0</strong></div>
-    <div class="spacer"></div>
-    <div class="running-label" id="st-spin" style="display:none;">
-      <span class="spinner"></span> Baixando...
-    </div>
+  <div id="stats" class="stats" style="display:none;">
+    Total: <strong id="s-total">0</strong>
+    &nbsp;|&nbsp; Prontos: <strong id="s-done">0</strong>
+    &nbsp;|&nbsp; Erros: <strong id="s-err" style="color:var(--red)">0</strong>
+    <div class="sp"></div>
+    <span id="s-spin" style="display:none;font-size:12px;color:var(--text3);"><span class="spin"></span>Baixando...</span>
   </div>
 
-  <div id="dl-all-wrap" style="display:none;">
-    <button class="btn-dl-all" onclick="downloadAll()">⬇ Baixar tudo como ZIP</button>
-    <div class="warn-txt">Arquivos deletados do servidor em 10 minutos</div>
+  <div id="zip-wrap" style="display:none;">
+    <button class="btn-zip" id="btn-zip">⬇ Baixar tudo como ZIP</button>
+    <div class="hint">Arquivos deletados do servidor em 10 minutos</div>
   </div>
 
   <div class="footer">Máximo 20 vídeos por sessão</div>
 </div>
 
 <script>
-const S={urls:[],sessionId:null,pollTimer:null,audioOnly:false,running:false};
-let urlCounter=0;
+// State
+var urls = [];
+var sessionId = null;
+var pollTimer = null;
+var audioOnly = false;
+var running = false;
+var counter = 0;
 
-function toggleAudio(){
-  S.audioOnly=!S.audioOnly;
-  document.getElementById('tog-el').classList.toggle('on',S.audioOnly);
-  const q=document.getElementById('quality');
-  q.disabled=S.audioOnly;q.style.opacity=S.audioOnly?'0.4':'1';
+// Elements
+var inp = document.getElementById('inp');
+var btnAdd = document.getElementById('btn-add');
+var btnStart = document.getElementById('btn-start');
+var btnClear = document.getElementById('btn-clear');
+var btnZip = document.getElementById('btn-zip');
+var tog = document.getElementById('tog');
+
+// Add URL
+function addUrl() {
+  var url = inp.value.trim();
+  if (!url) return;
+  if (!url.startsWith('http')) { alert('Link inválido'); return; }
+  if (urls.length >= 20) { alert('Máximo 20 vídeos'); return; }
+  var exists = false;
+  for (var i = 0; i < urls.length; i++) {
+    if (urls[i].url === url) { exists = true; break; }
+  }
+  if (!exists) {
+    urls.push({id: ++counter, url: url, jobId: null, status: 'queued', progress: 0, title: url.substring(0, 55), filename: null, filesize: null, error: null});
+  }
+  inp.value = '';
+  render();
+  updateBtns();
 }
 
-function addUrl(){
-  if(S.running)return;
-  const input=document.getElementById('url-input');
-  const raw=input.value.trim();
-  if(!raw)return;
-  const lines=raw.split(/[\n\r\s]+/).filter(u=>u.startsWith('http'));
-  if(!lines.length){alert('Link inválido — deve começar com http');return;}
-  lines.forEach(url=>{
-    if(S.urls.find(u=>u.url===url))return;
-    if(S.urls.length>=20){alert('Máximo 20 vídeos');return;}
-    S.urls.push({id:++urlCounter,url,status:'queued',progress:0,title:url.slice(0,60),filename:null,filesize:null,error:null,jobId:null});
-  });
-  input.value='';
-  renderList();updateButtons();
+btnAdd.onclick = addUrl;
+inp.onkeydown = function(e) { if (e.key === 'Enter') addUrl(); };
+
+// Toggle audio
+document.getElementById('tog-row').onclick = function() {
+  audioOnly = !audioOnly;
+  tog.className = 'tog' + (audioOnly ? ' on' : '');
+  document.getElementById('quality').disabled = audioOnly;
+  document.getElementById('quality').style.opacity = audioOnly ? '0.4' : '1';
+};
+
+// Remove URL
+function removeUrl(id) {
+  urls = urls.filter(function(u) { return u.id !== id; });
+  render();
+  updateBtns();
 }
 
-function removeUrl(id){
-  if(S.running)return;
-  S.urls=S.urls.filter(u=>u.id!==id);
-  renderList();updateButtons();
+// Download one
+function dlOne(jobId) {
+  var a = document.createElement('a');
+  a.href = '/api/get/' + jobId;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
-function clearAll(){
-  if(S.running)return;
-  S.urls=[];S.sessionId=null;
-  if(S.pollTimer)clearInterval(S.pollTimer);
-  renderList();updateButtons();
-  const sb=document.getElementById('stats-bar');if(sb)sb.style.display='none';
-  const dw=document.getElementById('dl-all-wrap');if(dw)dw.style.display='none';
-}
+// Clear all
+btnClear.onclick = function() {
+  if (running) return;
+  urls = [];
+  sessionId = null;
+  if (pollTimer) clearInterval(pollTimer);
+  render();
+  updateBtns();
+  document.getElementById('stats').style.display = 'none';
+  document.getElementById('zip-wrap').style.display = 'none';
+};
 
-function renderList(){
-  const list=document.getElementById('url-list');
-  const empty=document.getElementById('empty-msg');
-  if(!S.urls.length){list.innerHTML='';list.appendChild(empty);empty.style.display='';return;}
-  empty.style.display='none';
-  list.innerHTML=S.urls.map(u=>{
-    const showBar=u.status==='downloading'||u.status==='processing';
-    const showDl=u.status==='done'&&u.jobId;
-    const showRm=!S.running||(u.status!=='downloading'&&u.status!=='processing');
-    const extraClass=u.status==='done'?' is-done':u.status==='error'?' is-error':'';
-    const sub=u.status==='queued'?'Na fila'
-      :u.status==='downloading'?'Baixando...'
-      :u.status==='processing'?'Processando...'
-      :u.status==='done'?(u.filename||'Concluído')+(u.filesize?' · '+fmtB(u.filesize):'')
-      :u.status==='error'?'Erro':'';
-    return `<div class="url-item${extraClass}">
-      <div class="ui-dot ${u.status}"></div>
-      <div class="ui-text">
-        <div class="ui-title" title="${esc(u.url)}">${esc(u.title||u.url)}</div>
-        <div class="ui-sub">${esc(sub)}</div>
-        ${showBar?`<div class="ui-bar"><div class="ui-fill" style="width:${u.progress}%"></div></div>`:''}
-      </div>
-      <span class="ui-pct">${showBar?u.progress+'%':''}</span>
-      ${showDl?`<button class="ui-dl" onclick="dlOne('${u.jobId}')">⬇ Baixar</button>`:''}
-      ${u.status==='error'?`<span class="ui-err" title="${esc(u.error||'')}">✗ erro</span>`:''}
-      ${showRm?`<button class="ui-rm" onclick="removeUrl(${u.id})">×</button>`:''}
-    </div>`;
-  }).join('');
-}
+// Start downloads
+btnStart.onclick = function() {
+  var queued = urls.filter(function(u) { return u.status === 'queued'; });
+  if (!queued.length) return;
+  running = true;
+  updateBtns();
 
-function updateButtons(){
-  const hasQ=S.urls.some(u=>u.status==='queued');
-  const hasDone=S.urls.some(u=>u.status==='done');
-  document.getElementById('btn-start').disabled=!S.urls.length||S.running||!hasQ;
-  document.getElementById('btn-clear').disabled=S.running;
-  const dw=document.getElementById('dl-all-wrap');if(dw)dw.style.display=hasDone?'':'none';
-}
+  var urlList = queued.map(function(u) { return u.url; });
+  var quality = document.getElementById('quality').value;
 
-async function startAll(){
-  const queued=S.urls.filter(u=>u.status==='queued');
-  if(!queued.length)return;
-  S.running=true;updateButtons();
-  const urls=queued.map(u=>u.url);
-  const quality=document.getElementById('quality').value;
-  try{
-    const res=await fetch('/api/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({urls,quality,audio_only:S.audioOnly})});
-    const data=await res.json();
-    if(data.error){alert('Erro: '+data.error);S.running=false;updateButtons();return;}
-    S.sessionId=data.session_id;
-    data.job_ids.forEach((jobId,i)=>{
-      const urlObj=S.urls.find(u=>u.url===queued[i].url);
-      if(urlObj){urlObj.jobId=jobId;urlObj.status='downloading';}
-    });
-    const sb=document.getElementById('stats-bar');if(sb)sb.style.display='';
-    if(S.pollTimer)clearInterval(S.pollTimer);
-    S.pollTimer=setInterval(pollSession,800);
-  }catch(e){alert('Erro: '+e.message);S.running=false;updateButtons();}
-}
-
-async function pollSession(){
-  if(!S.sessionId)return;
-  try{
-    const res=await fetch('/api/session/'+S.sessionId);
-    if(res.status===404){clearInterval(S.pollTimer);return;}
-    const data=await res.json();
-    data.items.forEach((srv,i)=>{
-      // Match by jobId first, then by index as fallback
-      let local=S.urls.find(u=>u.jobId===srv.job_id);
-      if(!local) local=S.urls.filter(u=>u.status!=='queued')[i];
-      if(!local) local=S.urls[i];
-      if(!local)return;
-      if(srv.job_id) local.jobId=srv.job_id;
-      local.status=srv.status;
-      local.progress=srv.progress;
-      local.title=srv.title||local.title;
-      local.filename=srv.filename;
-      local.filesize=srv.filesize;
-      local.error=srv.error;
-    });
-    renderList();renderStats();updateButtons();
-    if(data.status==='done'){
-      clearInterval(S.pollTimer);S.running=false;updateButtons();
-      const sp=document.getElementById('st-spin');if(sp)sp.style.display='none';
+  fetch('/api/start', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({urls: urlList, quality: quality, audio_only: audioOnly})
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.error) {
+      alert('Erro: ' + data.error);
+      running = false;
+      updateBtns();
+      return;
     }
-  }catch(e){console.error(e);}
+    sessionId = data.session_id;
+    // Map job IDs back to urls
+    for (var i = 0; i < data.job_ids.length; i++) {
+      if (queued[i]) {
+        queued[i].jobId = data.job_ids[i];
+        queued[i].status = 'downloading';
+      }
+    }
+    document.getElementById('stats').style.display = '';
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(poll, 1000);
+    render();
+  })
+  .catch(function(e) {
+    alert('Erro: ' + e.message);
+    running = false;
+    updateBtns();
+  });
+};
+
+// Poll session
+function poll() {
+  if (!sessionId) return;
+  fetch('/api/session/' + sessionId)
+  .then(function(r) {
+    if (r.status === 404) { clearInterval(pollTimer); return null; }
+    return r.json();
+  })
+  .then(function(data) {
+    if (!data) return;
+    // Update each url by matching job_id
+    for (var i = 0; i < data.items.length; i++) {
+      var srv = data.items[i];
+      var local = null;
+      // Find by jobId
+      for (var j = 0; j < urls.length; j++) {
+        if (urls[j].jobId === srv.job_id) { local = urls[j]; break; }
+      }
+      // Fallback: find by url
+      if (!local) {
+        for (var j = 0; j < urls.length; j++) {
+          if (urls[j].url === srv.url) { local = urls[j]; break; }
+        }
+      }
+      if (!local) continue;
+      local.jobId = srv.job_id;
+      local.status = srv.status;
+      local.progress = srv.progress;
+      if (srv.title) local.title = srv.title;
+      local.filename = srv.filename;
+      local.filesize = srv.filesize;
+      local.error = srv.error;
+    }
+    render();
+    updateStats();
+
+    if (data.status === 'done') {
+      clearInterval(pollTimer);
+      running = false;
+      updateBtns();
+      document.getElementById('s-spin').style.display = 'none';
+    }
+  })
+  .catch(function(e) { console.error('poll error', e); });
 }
 
-function renderStats(){
-  const done=S.urls.filter(u=>u.status==='done').length;
-  const errs=S.urls.filter(u=>u.status==='error').length;
-  const running=S.urls.some(u=>u.status==='downloading'||u.status==='processing');
-  document.getElementById('st-total').textContent=S.urls.length;
-  document.getElementById('st-done').textContent=done;
-  document.getElementById('st-err').textContent=errs;
-  const sp=document.getElementById('st-spin');if(sp)sp.style.display=running?'flex':'none';
+// Download all ZIP
+document.getElementById('btn-zip').onclick = function() {
+  if (sessionId) window.location.href = '/api/download-all/' + sessionId;
+};
+
+// Render list
+function render() {
+  var list = document.getElementById('list');
+  if (!urls.length) {
+    list.innerHTML = '<div class="empty">Adicione links acima para começar</div>';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < urls.length; i++) {
+    var u = urls[i];
+    var showBar = u.status === 'downloading' || u.status === 'processing';
+    var sub = u.status === 'queued' ? 'Na fila'
+      : u.status === 'downloading' ? 'Baixando...'
+      : u.status === 'processing' ? 'Processando...'
+      : u.status === 'done' ? (u.filename || 'Concluído') + (u.filesize ? ' · ' + fmtB(u.filesize) : '')
+      : u.status === 'error' ? ('Erro: ' + (u.error || '')) : '';
+    html += '<div class="ui">';
+    html += '<div class="ui-dot ' + u.status + '"></div>';
+    html += '<div class="ui-info">';
+    html += '<div class="ui-title">' + esc(u.title) + '</div>';
+    html += '<div class="ui-sub">' + esc(sub) + '</div>';
+    if (showBar) html += '<div class="ui-bar"><div class="ui-fill" style="width:' + u.progress + '%"></div></div>';
+    html += '</div>';
+    html += '<span class="ui-pct">' + (showBar ? u.progress + '%' : '') + '</span>';
+    if (u.status === 'done' && u.jobId) html += '<button class="btn-dl" onclick="dlOne(\'' + u.jobId + '\')">⬇ Baixar</button>';
+    if (!running || (u.status !== 'downloading' && u.status !== 'processing')) {
+      html += '<button class="btn-rm" onclick="removeUrl(' + u.id + ')">×</button>';
+    }
+    html += '</div>';
+  }
+  list.innerHTML = html;
 }
 
-function dlOne(jobId){
-  const a=document.createElement('a');a.href='/api/get/'+jobId;
-  document.body.appendChild(a);a.click();document.body.removeChild(a);
+function updateStats() {
+  var done = urls.filter(function(u) { return u.status === 'done'; }).length;
+  var errs = urls.filter(function(u) { return u.status === 'error'; }).length;
+  var isRunning = urls.some(function(u) { return u.status === 'downloading' || u.status === 'processing'; });
+  document.getElementById('s-total').textContent = urls.length;
+  document.getElementById('s-done').textContent = done;
+  document.getElementById('s-err').textContent = errs;
+  document.getElementById('s-spin').style.display = isRunning ? '' : 'none';
+  document.getElementById('zip-wrap').style.display = done > 0 ? '' : 'none';
 }
 
-function downloadAll(){
-  if(!S.sessionId)return;
-  window.location.href='/api/download-all/'+S.sessionId;
+function updateBtns() {
+  var hasQueued = urls.some(function(u) { return u.status === 'queued'; });
+  btnStart.disabled = !urls.length || running || !hasQueued;
+  btnClear.disabled = running;
 }
 
-function fmtB(b){
-  if(!b)return'';
-  if(b<1048576)return(b/1024).toFixed(1)+' KB';
-  if(b<1073741824)return(b/1048576).toFixed(1)+' MB';
-  return(b/1073741824).toFixed(2)+' GB';
+function fmtB(b) {
+  if (!b) return '';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  if (b < 1073741824) return (b/1048576).toFixed(1) + ' MB';
+  return (b/1073741824).toFixed(2) + ' GB';
 }
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
-document.getElementById('url-input').addEventListener('keydown',e=>{if(e.key==='Enter')addUrl();});
-document.getElementById('url-input').addEventListener('paste',e=>{return;
-  setTimeout(()=>{const v=document.getElementById('url-input').value;if(v.includes('\n')||v.split(' ').length>1)addUrl();},50);
-});
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Initial render
+render();
 </script>
 </body>
 </html>
