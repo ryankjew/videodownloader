@@ -5,6 +5,8 @@ import subprocess
 import shutil
 import zipfile
 import io
+import json
+import time
 from pathlib import Path
 from flask import Flask, request, jsonify, render_template, send_file, after_this_request
 
@@ -13,23 +15,52 @@ app = Flask(__name__)
 WORK_DIR = Path("/tmp/videodownloader")
 WORK_DIR.mkdir(exist_ok=True)
 
-jobs = {}
-sessions = {}
-
 SUPPORTED_SITES = [
     "TikTok", "YouTube", "Instagram", "Twitter/X", "Facebook",
     "Reddit", "Vimeo", "Twitch", "Pinterest", "Dailymotion", "+1000 sites"
 ]
 
+def job_path(job_id):
+    return WORK_DIR / job_id / "job.json"
+
+def read_job(job_id):
+    p = job_path(job_id)
+    if p.exists():
+        try:
+            return json.loads(p.read_text())
+        except:
+            pass
+    return None
+
+def write_job(job):
+    p = job_path(job["id"])
+    p.parent.mkdir(exist_ok=True)
+    p.write_text(json.dumps(job))
+
+def session_path(session_id):
+    return WORK_DIR / f"session_{session_id}.json"
+
+def read_session(session_id):
+    p = session_path(session_id)
+    if p.exists():
+        try:
+            return json.loads(p.read_text())
+        except:
+            pass
+    return None
+
+def write_session(sess):
+    session_path(sess["id"]).write_text(json.dumps(sess))
+
 def download_video(job_id, url, quality, audio_only):
-    job = jobs[job_id]
     job_dir = WORK_DIR / job_id
     job_dir.mkdir(exist_ok=True)
 
-    try:
-        job["status"] = "downloading"
-        job["progress"] = 5
+    job = read_job(job_id) or {"id": job_id, "url": url}
+    job.update({"status": "downloading", "progress": 5, "title": url[:60]})
+    write_job(job)
 
+    try:
         out_template = str(job_dir / "video.%(ext)s")
         cmd = ["yt-dlp", "--no-playlist", "--no-warnings", "--no-part"]
 
@@ -61,33 +92,27 @@ def download_video(job_id, url, quality, audio_only):
                 try:
                     pct = float(line.split("%")[0].split()[-1])
                     job["progress"] = max(5, min(88, int(pct * 0.85)))
-                except:
-                    pass
-            if "[download] Destination:" in line:
-                try:
-                    fname = Path(line.split("Destination:")[-1].strip()).stem[:80]
-                    job["title"] = fname
+                    write_job(job)
                 except:
                     pass
             if "[Merger]" in line or "[ExtractAudio]" in line:
                 job["status"] = "processing"
                 job["progress"] = 90
+                write_job(job)
 
         proc.wait()
 
         if proc.returncode != 0:
             raise RuntimeError("Falha ao baixar. Verifique se o link é válido e público.")
 
-        # Find the downloaded file
-        files = [f for f in job_dir.glob("*") if f.is_file()]
+        files = [f for f in job_dir.glob("*") if f.is_file() and f.name != "job.json"]
         if not files:
             raise RuntimeError("Arquivo não encontrado após download")
 
         output_file = max(files, key=lambda f: f.stat().st_size)
         ext = output_file.suffix.lower()
-        title = job.get("title") or "video"
-        clean = "".join(c if c.isalnum() or c in " -_" else "_" for c in title).strip()
-        final_name = f"{clean or 'video'}{ext}"
+        title = url.split("/")[-1][:60] or "video"
+        final_name = f"video_{job_id}{ext}"
 
         job.update({
             "status": "done",
@@ -97,29 +122,37 @@ def download_video(job_id, url, quality, audio_only):
             "filesize": output_file.stat().st_size,
             "title": title,
         })
+        write_job(job)
+
+        # Auto cleanup after 10 min
+        def cleanup():
+            time.sleep(600)
+            shutil.rmtree(str(job_dir), ignore_errors=True)
+        threading.Thread(target=cleanup, daemon=True).start()
 
     except Exception as e:
         job["status"] = "error"
         job["error"] = str(e)
         job["progress"] = 0
-        shutil.rmtree(str(job_dir), ignore_errors=True)
+        write_job(job)
 
 
 def run_session(session_id, max_workers=3):
-    sess = sessions[session_id]
+    sess = read_session(session_id)
+    if not sess:
+        return
+    sess["status"] = "running"
+    write_session(sess)
+
     sem = threading.Semaphore(max_workers)
     threads = []
 
-    def worker(job_id, url, quality, audio_only):
+    def worker(item):
         with sem:
-            download_video(job_id, url, quality, audio_only)
+            download_video(item["job_id"], item["url"], sess["quality"], sess["audio_only"])
 
     for item in sess["items"]:
-        t = threading.Thread(
-            target=worker,
-            args=(item["job_id"], item["url"], sess["quality"], sess["audio_only"]),
-            daemon=True
-        )
+        t = threading.Thread(target=worker, args=(item,), daemon=True)
         threads.append(t)
         t.start()
 
@@ -127,14 +160,13 @@ def run_session(session_id, max_workers=3):
         t.join()
 
     sess["status"] = "done"
+    write_session(sess)
 
     def cleanup():
-        import time; time.sleep(600)
-        for item in sess["items"]:
-            jid = item["job_id"]
-            shutil.rmtree(str(WORK_DIR / jid), ignore_errors=True)
-            jobs.pop(jid, None)
-        sessions.pop(session_id, None)
+        time.sleep(600)
+        p = session_path(session_id)
+        if p.exists():
+            p.unlink()
     threading.Thread(target=cleanup, daemon=True).start()
 
 
@@ -159,28 +191,24 @@ def api_start():
     items = []
     for url in urls:
         job_id = str(uuid.uuid4())[:8]
-        jobs[job_id] = {
-            "id": job_id, "url": url, "status": "queued",
-            "progress": 0, "title": url[:50], "error": None,
-        }
+        job = {"id": job_id, "url": url, "status": "queued", "progress": 0, "title": url[:60], "error": None}
+        write_job(job)
         items.append({"job_id": job_id, "url": url})
 
-    sessions[session_id] = {
-        "id": session_id, "status": "running",
-        "items": items, "quality": quality, "audio_only": audio_only,
-    }
+    sess = {"id": session_id, "status": "pending", "items": items, "quality": quality, "audio_only": audio_only}
+    write_session(sess)
 
     threading.Thread(target=run_session, args=(session_id,), daemon=True).start()
     return jsonify({"session_id": session_id, "job_ids": [i["job_id"] for i in items]})
 
 @app.route("/api/session/<session_id>")
 def api_session(session_id):
-    if session_id not in sessions:
+    sess = read_session(session_id)
+    if not sess:
         return jsonify({"error": "Sessão não encontrada"}), 404
-    sess = sessions[session_id]
     items_out = []
     for item in sess["items"]:
-        j = jobs.get(item["job_id"], {})
+        j = read_job(item["job_id"]) or {}
         items_out.append({
             "job_id": item["job_id"],
             "url": item["url"],
@@ -195,22 +223,20 @@ def api_session(session_id):
 
 @app.route("/api/get/<job_id>")
 def api_get(job_id):
-    if job_id not in jobs:
-        return jsonify({"error": "Arquivo não encontrado ou expirado"}), 404
-    job = jobs[job_id]
-    if job["status"] != "done":
-        return jsonify({"error": "Arquivo não pronto"}), 404
-    output_path = Path(job["output_path"])
+    j = read_job(job_id)
+    if not j or j.get("status") != "done":
+        return jsonify({"error": "Arquivo não disponível"}), 404
+    output_path = Path(j["output_path"])
     if not output_path.exists():
         return jsonify({"error": "Arquivo não encontrado no disco"}), 404
-    filename = job.get("filename", "video.mp4")
+    filename = j.get("filename", "video.mp4")
     ext = output_path.suffix.lower()
     mime = "audio/mpeg" if ext == ".mp3" else "video/mp4"
 
     @after_this_request
     def delete_after(response):
         def remove():
-            import time; time.sleep(3)
+            time.sleep(3)
             try: output_path.unlink()
             except: pass
         threading.Thread(target=remove, daemon=True).start()
@@ -220,14 +246,14 @@ def api_get(job_id):
 
 @app.route("/api/download-all/<session_id>")
 def api_download_all(session_id):
-    if session_id not in sessions:
+    sess = read_session(session_id)
+    if not sess:
         return jsonify({"error": "Sessão não encontrada"}), 404
-    sess = sessions[session_id]
     buf = io.BytesIO()
     count = 0
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as zf:
         for item in sess["items"]:
-            j = jobs.get(item["job_id"], {})
+            j = read_job(item["job_id"]) or {}
             if j.get("status") == "done":
                 op = Path(j.get("output_path", ""))
                 if op.exists():
