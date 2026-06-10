@@ -13,8 +13,8 @@ app = Flask(__name__)
 WORK_DIR = Path("/tmp/videodownloader")
 WORK_DIR.mkdir(exist_ok=True)
 
-jobs = {}       # job_id -> individual download
-sessions = {}   # session_id -> list of job_ids
+jobs = {}
+sessions = {}
 
 SUPPORTED_SITES = [
     "TikTok", "YouTube", "Instagram", "Twitter/X", "Facebook",
@@ -30,32 +30,33 @@ def download_video(job_id, url, quality, audio_only):
         job["status"] = "downloading"
         job["progress"] = 5
 
-        out_template = str(job_dir / "%(title)s.%(ext)s")
-        cmd = ["yt-dlp", "--no-playlist", "--no-warnings"]
+        out_template = str(job_dir / "%(title).80s.%(ext)s")
+        cmd = ["yt-dlp", "--no-playlist", "--no-warnings", "--no-part"]
 
         if audio_only:
             cmd += ["-x", "--audio-format", "mp3", "--audio-quality", "0"]
         else:
-            if quality == "best":
-                cmd += ["-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"]
-            elif quality == "720":
+            if quality == "720":
                 cmd += ["-f", "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best[height<=720]"]
             elif quality == "480":
-                cmd += ["-f", "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480][ext=mp4]/best[height<=480]"]
+                cmd += ["-f", "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480]"]
             elif quality == "360":
-                cmd += ["-f", "bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/best[height<=360]/best"]
+                cmd += ["-f", "bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/best[height<=360]"]
             else:
                 cmd += ["-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"]
-            cmd += ["--postprocessor-args", "ffmpeg:-map_metadata -1 -map_chapters -1"]
             cmd += ["--merge-output-format", "mp4"]
 
         cmd += ["--no-mtime", "-o", out_template, "--newline", url]
 
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, bufsize=1
+        )
 
-        title = url
         for line in proc.stdout:
             line = line.strip()
+            if not line:
+                continue
             if "[download]" in line and "%" in line:
                 try:
                     pct = float(line.split("%")[0].split()[-1])
@@ -64,9 +65,8 @@ def download_video(job_id, url, quality, audio_only):
                     pass
             if "[download] Destination:" in line:
                 try:
-                    title = Path(line.split("Destination:")[-1].strip()).stem[:80]
-                    job["title"] = title
-                    job["status"] = "downloading"
+                    fname = Path(line.split("Destination:")[-1].strip()).stem[:80]
+                    job["title"] = fname
                 except:
                     pass
             if "[Merger]" in line or "[ExtractAudio]" in line:
@@ -78,13 +78,15 @@ def download_video(job_id, url, quality, audio_only):
         if proc.returncode != 0:
             raise RuntimeError("Falha ao baixar. Verifique se o link é válido e público.")
 
+        # Find the downloaded file
         files = [f for f in job_dir.glob("*") if f.is_file()]
         if not files:
             raise RuntimeError("Arquivo não encontrado após download")
 
         output_file = max(files, key=lambda f: f.stat().st_size)
         ext = output_file.suffix.lower()
-        clean = "".join(c if c.isalnum() or c in " -_" else "_" for c in (title or "video")).strip()
+        title = job.get("title") or "video"
+        clean = "".join(c if c.isalnum() or c in " -_" else "_" for c in title).strip()
         final_name = f"{clean or 'video'}{ext}"
 
         job.update({
@@ -130,12 +132,9 @@ def run_session(session_id, max_workers=3):
         import time; time.sleep(600)
         for item in sess["items"]:
             jid = item["job_id"]
-            job_dir = WORK_DIR / jid
-            shutil.rmtree(str(job_dir), ignore_errors=True)
-            if jid in jobs:
-                del jobs[jid]
-        if session_id in sessions:
-            del sessions[session_id]
+            shutil.rmtree(str(WORK_DIR / jid), ignore_errors=True)
+            jobs.pop(jid, None)
+        sessions.pop(session_id, None)
     threading.Thread(target=cleanup, daemon=True).start()
 
 
@@ -162,7 +161,7 @@ def api_start():
         job_id = str(uuid.uuid4())[:8]
         jobs[job_id] = {
             "id": job_id, "url": url, "status": "queued",
-            "progress": 0, "title": url[:60], "error": None,
+            "progress": 0, "title": url[:50], "error": None,
         }
         items.append({"job_id": job_id, "url": url})
 
@@ -238,10 +237,10 @@ def api_download_all(session_id):
         return jsonify({"error": "Nenhum arquivo pronto"}), 404
     buf.seek(0)
     return send_file(buf, as_attachment=True,
-                     download_name=f"videos_{session_id}.zip",
+                     download_name=f"clipador_{session_id}.zip",
                      mimetype="application/zip")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    print(f"\n🎬 VideoDownloader — porta {port}\n")
+    print(f"\n🎬 Clipador — porta {port}\n")
     app.run(host="0.0.0.0", port=port, threaded=True)
